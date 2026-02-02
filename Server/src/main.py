@@ -22,6 +22,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 import os
+import sys
 import threading
 import time
 from typing import AsyncIterator, Any
@@ -581,6 +582,13 @@ def create_mcp_server(project_scoped_tools: bool) -> FastMCP:
 
 def main():
     """Entry point for uvx and console scripts."""
+    # Fix Windows asyncio IOCP issues with concurrent WebSocket + HTTP connections
+    # WinError 64: "The specified network name is no longer available"
+    # Using SelectorEventLoop avoids IOCP issues. Trade-off: no asyncio subprocess
+    # support on Windows, but the MCP server doesn't need it.
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     parser = argparse.ArgumentParser(
         description="MCP for Unity Server",
         formatter_class=argparse.RawDescriptionHelpFormatter,
